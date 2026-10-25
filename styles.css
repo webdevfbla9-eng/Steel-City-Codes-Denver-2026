@@ -1,0 +1,293 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #FBFAF7;
+  color: #1C1A17;
+  font-family: Georgia, serif;
+}
+
+#students,
+#parents {
+  display: block;
+  height: 0;
+}
+
+h1,
+h2,
+.stat {
+  font-family: "Bricolage Grotesque", Georgia, serif;
+  font-weight: 600;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 32px;
+  background: #1A1613;
+}
+
+.logo {
+  height: 56px;
+  width: auto;
+  display: block;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px 28px;
+}
+
+nav a {
+  color: #FBFAF7;
+  font-family: Georgia, serif;
+  font-size: 1.05rem;
+  text-decoration: none;
+}
+
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #1A1613 url("assets/volunteers-group.jpg") center center / cover no-repeat;
+  color: #FBFAF7;
+  text-align: center;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #1A1613;
+  opacity: 0.55;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  width: min(920px, 100%);
+  padding: 64px 24px;
+}
+
+.hero-logo {
+  width: min(520px, 100%);
+  height: auto;
+}
+
+.hero h1 {
+  margin: 32px auto 36px;
+  max-width: 16em;
+  font-size: clamp(2rem, 4.4vw, 3.35rem);
+  line-height: 1.15;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.btn {
+  display: inline-block;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 10px;
+  background: #F1C446;
+  color: #1C1A17;
+  font-family: Georgia, serif;
+  font-size: 1.05rem;
+  line-height: 1.3;
+  text-decoration: none;
+}
+
+.counts {
+  display: flex;
+  justify-content: space-around;
+  gap: 32px;
+  padding: 80px 32px;
+  background: #FBFAF7;
+  color: #1C1A17;
+  text-align: center;
+}
+
+.count {
+  flex: 1;
+  max-width: 320px;
+}
+
+.stat {
+  margin: 0;
+  font-size: clamp(3rem, 6vw, 4.5rem);
+  line-height: 1;
+}
+
+.label {
+  margin: 10px 0 0;
+  font-family: Georgia, serif;
+  font-size: 1.25rem;
+}
+
+.admin {
+  background: #F4F1EA;
+  padding: 72px 28px;
+}
+
+.admin-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+  max-width: 1160px;
+  margin: 0 auto;
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.person img {
+  width: 200px;
+  height: 200px;
+  flex: none;
+  object-fit: cover;
+  object-position: center center;
+  border-radius: 50%;
+  border: 6px solid #1A1613;
+}
+
+.person-chai img {
+  object-position: center top;
+}
+
+.person-dark img {
+  border-color: #1A1613;
+}
+
+.person-yellow img {
+  border-color: #F1C446;
+}
+
+.bio {
+  width: 100%;
+  margin-top: 14px;
+  padding: 18px 16px 22px;
+  border: 6px solid #1A1613;
+}
+
+.person-dark .bio {
+  background: #1A1613;
+  border-color: #1A1613;
+  color: #FBFAF7;
+}
+
+.person-yellow .bio {
+  background: #F1C446;
+  border-color: #F1C446;
+  color: #1C1A17;
+}
+
+.bio h2 {
+  margin: 0 0 10px;
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
+.bio p {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.join {
+  background: #1A1613;
+  color: #FBFAF7;
+  padding: 56px 28px 80px;
+}
+
+.group {
+  display: block;
+  width: min(1040px, 100%);
+  height: auto;
+  margin: 0 auto 48px;
+}
+
+.join-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  width: min(1040px, 100%);
+  margin: 0 auto 40px;
+}
+
+.join-block:last-child {
+  margin-bottom: 0;
+}
+
+.join-copy {
+  max-width: 640px;
+}
+
+.join h2 {
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  line-height: 1.1;
+}
+
+.join p {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: 1.15rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .admin-grid {
+    grid-template-columns: 1fr;
+    max-width: 460px;
+  }
+
+  .person img {
+    width: 210px;
+    height: 210px;
+  }
+}
+
+@media (max-width: 700px) {
+  header {
+    flex-wrap: wrap;
+    padding: 12px 16px;
+  }
+
+  .logo {
+    height: 48px;
+  }
+
+  nav {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 8px 16px;
+  }
+
+  .counts {
+    flex-direction: column;
+    align-items: center;
+    padding: 56px 20px;
+  }
+
+  .join-block {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
