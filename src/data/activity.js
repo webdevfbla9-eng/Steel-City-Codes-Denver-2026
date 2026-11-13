@@ -1,7 +1,6 @@
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { supabase } from '../lib/supabase.js';
 
-// Stored in this browser only. To see activity from every visitor, replace
-// readAll/writeAll with calls to a shared backend (Supabase, Firebase, etc.).
 const STORAGE_KEY = 'scc-activity-v1';
 const CHANGE_EVENT = 'scc-activity-change';
 const MAX_EVENTS = 5000;
@@ -14,7 +13,7 @@ export const activityTypes = {
   ide_request: { label: 'IDE account request', audience: 'Students' },
   parent_question: { label: 'Parent question', audience: 'Parents' },
   donation_click: { label: 'Donation click', audience: 'Parents' },
-  form_open: { label: 'Opened a form', audience: 'Visitors' },
+  form_open: { label: 'Opened a form', audience: 'Parents' },
   account_created: { label: 'New account', audience: 'Visitors' },
 };
 
@@ -61,12 +60,16 @@ export function audienceFor(event) {
   );
 }
 
-function currentRole() {
+function currentProfile() {
   try {
-    return JSON.parse(localStorage.getItem('scc-auth-cache'))?.profile?.role || '';
+    return JSON.parse(localStorage.getItem('scc-auth-cache'))?.profile || null;
   } catch {
-    return '';
+    return null;
   }
+}
+
+function currentRole() {
+  return currentProfile()?.role || '';
 }
 
 let cache = null;
@@ -93,15 +96,77 @@ function writeAll(events) {
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
-export function logActivity(type, data = {}) {
-  const event = { id: newId(), type, at: new Date().toISOString(), ...data };
-  if (!event.role) event.role = currentRole();
-  event.audience = audienceFor(event);
-  writeAll([...readAll(), event]);
+function toFeedEvent(row) {
+  const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  return {
+    ...payload,
+    id: row.id,
+    type: row.type,
+    audience: row.audience || payload.audience,
+    role: row.role || payload.role,
+    path: row.path || payload.path,
+    form: row.form || payload.form,
+    name: row.name || payload.name,
+    email: row.email || payload.email,
+    at: row.created_at || payload.at,
+  };
 }
 
-export function clearActivity() {
-  writeAll([]);
+async function persistActivity(event) {
+  if (!supabase) return;
+  const payload = {
+    type: event.type,
+    audience: event.audience || null,
+    role: event.role || null,
+    path: event.path || null,
+    form: event.form || null,
+    name: event.name || null,
+    email: event.email || null,
+  };
+  const { error: rpcError } = await supabase.rpc('log_site_activity', { p_event: payload });
+  if (!rpcError) return;
+
+  const { data: authData } = await supabase.auth.getUser();
+  const userId = authData?.user?.id;
+  if (!userId) return;
+  await supabase.from('activity_events').insert({
+    user_id: userId,
+    type: payload.type,
+    audience: payload.audience,
+    role: payload.role,
+    path: payload.path,
+    form: payload.form,
+    name: payload.name,
+    email: payload.email,
+    payload,
+  });
+}
+
+export function logActivity(type, data = {}) {
+  const profile = currentProfile();
+  const event = { id: newId(), type, at: new Date().toISOString(), ...data };
+  if (!event.role) event.role = profile?.role || currentRole();
+  if (!event.name) event.name = profile?.full_name || profile?.name || '';
+  if (!event.email) event.email = profile?.email || '';
+  event.audience = audienceFor(event);
+  writeAll([...readAll(), event]);
+  persistActivity(event).catch(() => {});
+}
+
+export async function listActivityForAdmin() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.rpc('list_activity_for_admin');
+  if (!error) {
+    return (data || []).map(toFeedEvent).sort((a, b) => String(a.at).localeCompare(String(b.at)));
+  }
+
+  const { data: rows, error: queryError } = await supabase
+    .from('activity_events')
+    .select('id, user_id, type, audience, role, path, form, name, email, payload, created_at')
+    .order('created_at', { ascending: true })
+    .limit(2000);
+  if (queryError) throw queryError;
+  return (rows || []).map(toFeedEvent);
 }
 
 function subscribe(callback) {
@@ -119,51 +184,53 @@ function subscribe(callback) {
   };
 }
 
+function eventKey(event) {
+  const time = Date.parse(event?.at) || 0;
+  return [event?.type, event?.form || '', event?.path || '', event?.email || '', event?.challenge || '', Math.floor(time / 5000)].join('|');
+}
+
+function mergeActivity(local, remote) {
+  const merged = [];
+  const seen = new Set();
+  [...(remote || []), ...(local || [])].forEach((event) => {
+    const key = eventKey(event);
+    if (!event || seen.has(key)) return;
+    seen.add(key);
+    merged.push(event);
+  });
+  return merged.sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')));
+}
+
 export function useActivity() {
-  return useSyncExternalStore(subscribe, readAll);
-}
+  const local = useSyncExternalStore(subscribe, readAll);
+  const [remote, setRemote] = useState([]);
 
-const demoNames = ['Maya Patel', 'Ethan Kim', 'Sofia Ramirez', 'Noah Johnson', 'Ava Nguyen', 'Liam Brooks', 'Zara Ali', 'Owen Lee'];
-const demoPages = ['/', '/', '/', '/about', '/volunteers', '/parents', '/parents', '/students', '/students'];
-const demoChallenges = [
-  ['python', 'Count the Vowels'],
-  ['python', 'FizzBuzz'],
-  ['java', 'Loop Output'],
-  ['javascript', 'Title Case'],
-];
-const demoQuestions = [
-  'Is there a waitlist for the Koelbel Library chapter?',
-  'Can my 3rd grader join Intro to Python?',
-  'Do students need to bring lunch to summer camp?',
-  'Is the Cherry Creek Academy chapter open to students from other schools?',
-];
+  useEffect(() => {
+    if (!supabase) return undefined;
+    let cancelled = false;
 
-export function loadDemoActivity() {
-  const pick = (list) => list[Math.floor(Math.random() * list.length)];
-  const events = [];
-  const now = Date.now();
-  for (let day = 29; day >= 0; day--) {
-    const dayStart = now - day * 86400000;
-    const at = () => new Date(dayStart - Math.random() * 36000000).toISOString();
-    const add = (type, data) => events.push({ id: newId(), type, at: at(), demo: true, ...data });
-    const views = 8 + Math.floor(Math.random() * 25) + (day < 7 ? 10 : 0);
-    for (let i = 0; i < views; i++) add('page_view', { path: pick(demoPages) });
-    if (Math.random() < 0.5) {
-      const [language, challenge] = pick(demoChallenges);
-      add('assessment_passed', { name: pick(demoNames), language, challenge });
-    }
-    if (Math.random() < 0.15) add('assessment_completed', { name: pick(demoNames), language: pick(['python', 'java']), score: '4 / 4' });
-    if (Math.random() < 0.6) add('daily_solved', { challenge: 'Daily challenge', language: pick(['python', 'java']) });
-    if (Math.random() < 0.2) add('ide_request', { name: pick(demoNames), email: 'student@example.com', chapter: pick(['Smoky Hill Library', 'Koelbel Library', 'Castlewood Library']), message: 'I would like an account for the Steel City Codes IDE.', status: 'new' });
-    if (Math.random() < 0.2) add('parent_question', { name: pick(demoNames), email: 'parent@example.com', message: pick(demoQuestions), status: 'new' });
-    if (Math.random() < 0.3) add('donation_click', {});
-    if (Math.random() < 0.35) add('account_created', { name: pick(demoNames), email: 'member@example.com', role: pick(['student', 'parent', 'volunteer']) });
-    if (Math.random() < 0.4) add('form_open', { form: pick(['School Year Chapter Registration Form', 'Summer Camp Registration Form', 'School Year Chapters Volunteer Form']) });
-  }
-  events.sort((a, b) => a.at.localeCompare(b.at));
-  writeAll([...readAll().filter((e) => !e.demo), ...events].sort((a, b) => a.at.localeCompare(b.at)));
-}
+    const load = () =>
+      listActivityForAdmin()
+        .then((rows) => {
+          if (!cancelled) setRemote(rows);
+        })
+        .catch(() => {
+          if (!cancelled) setRemote([]);
+        });
 
-export function clearDemoActivity() {
-  writeAll(readAll().filter((event) => !event.demo));
+    load();
+    const channel = supabase
+      .channel('activity-events')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'activity_events' }, () => {
+        load();
+      })
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return mergeActivity(local, remote);
 }

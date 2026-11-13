@@ -25,12 +25,6 @@ export async function seedKnownProfiles() {
 
 export async function listProfilesForAdmin() {
   const client = requireClient();
-  try {
-    await seedKnownProfiles();
-  } catch {
-    // Listing can still succeed if the seed helper is missing or already applied.
-  }
-
   const { data, error } = await client.rpc('list_profiles_for_admin');
   if (!error) return data || [];
   if (!isMissingRpc(error)) throw new Error(error.message);

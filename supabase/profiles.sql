@@ -330,17 +330,7 @@ BEGIN
       ('clucy6075@gmail.com', 'volunteer', 'pending')
   ) AS s(email, role, approval_status)
     ON lower(u.email) = s.email
-  ON CONFLICT (id) DO UPDATE
-  SET
-    email = EXCLUDED.email,
-    role = EXCLUDED.role,
-    approval_status = EXCLUDED.approval_status,
-    created_at = EXCLUDED.created_at,
-    updated_at = now(),
-    full_name = CASE
-      WHEN coalesce(public.profiles.full_name, '') = '' THEN EXCLUDED.full_name
-      ELSE public.profiles.full_name
-    END;
+  ON CONFLICT (id) DO NOTHING;
 
   RETURN QUERY
     SELECT p.*

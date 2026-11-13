@@ -71,7 +71,9 @@ export default function AdminUsers() {
       const row = changes.role
         ? await setProfileRole(target.id, changes.role)
         : await setProfileApproval(target.id, changes.approval_status);
-      setProfiles((prev) => prev.map((item) => (item.id === row.id ? { ...item, ...row } : item)));
+      setProfiles((prev) =>
+        prev.map((item) => (item.id === row.id ? { ...item, ...row, approval_status: changes.approval_status || row.approval_status, role: changes.role || row.role } : item)),
+      );
     } catch (err) {
       setError(err.message);
     }
