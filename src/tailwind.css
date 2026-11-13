@@ -1,0 +1,14 @@
+/* Preflight is left out so Tailwind doesn't reset the hand-written styles in index.css. */
+@layer theme, base, components, utilities;
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+@theme {
+  --color-charcoal: #1a1613;
+  --color-brand-yellow: #f1c446;
+  --color-cream: #f4f1ea;
+  --color-off-white: #fbfaf7;
+  --color-ink: #1c1a17;
+  --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body: Georgia, 'Times New Roman', serif;
+}
